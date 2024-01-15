@@ -39,10 +39,7 @@ def do_deploy(archive_path):
 
         # Creating a new symbolic link pointing to the extracted contents
         run(f"sudo ln -s {path_to_create} /data/web_static/current")
-
-        for host in env.hosts:
-            print(f"Deployment to the server with the IP: {host} is Done")
-
+        print("New version deployed!")
         return True
     except Exception as e:
         print(f"Deployment failed: {e}")
