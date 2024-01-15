@@ -1,46 +1,47 @@
 #!/usr/bin/python3
-"""A script that deploys the web_static content to the servers and
-decompresses it using tar -xzvf"""
-from fabric.api import *
-from datetime import datetime
-import os.path
+"""Compress web_static files."""
 
-# Connecting to the servers
-env.hosts = ['54.146.92.28', '107.23.156.230']
+from fabric.api import local
+from fabric.api import run
+from fabric.api import put
+from fabric.api import env
+from datetime import datetime
+import os
+
+env.hosts = [
+    '107.23.156.230',
+    '54.146.92.28'
+]
+env.user = "ubuntu"
 
 
 def do_deploy(archive_path):
-    """A function that deploys files to servers
-    """
-    if not os.path.exists(archive_path):
+    """Deply the pack to the server."""
+    if not os.path.isfile(archive_path):
         return False
-    try:
-        # Uploading the ARCHIVE to the remote servers at /tmp/
-        put(archive_path, '/tmp/')
 
-        # Extracting the file name only without tzg extension
-        archive_name = archive_path.split('/')[-1]  # includes .tgz
-        file_name = archive_name.split('.')[0]  # without .tgz
-
-        # Creating the directory to store the extracted contents
-        path_to_create = f"/data/web_static/releases/{file_name}"
-        run(f'sudo mkdir -p {path_to_create}')
-
-        # Uncompress the archive into the directory created above
-        run(f"sudo tar -xzf /tmp/{archive_name} "
-            f"-C {path_to_create} "
-            f"--strip-components=1")
-
-        # Remove the archive from the web server
-        run(f"sudo rm /tmp/{archive_name}")
-
-        # Deleting the current symbolic link from the servers
-        run(f"sudo rm -f /data/web_static/current")
-
-        # Creating a new symbolic link pointing to the extracted contents
-        run(f"sudo ln -s {path_to_create} /data/web_static/current")
-        print("New version deployed!")
-        return True
-    except Exception as e:
-        print(f"Deployment failed: {e}")
+    if put(archive_path, "/tmp/").failed is True:
         return False
+    archive = archive_path.split("/")[-1]
+    arch_name = archive.split(".")[0]
+    re_path = "/data/web_static/releases/{}/".format(arch_name)
+    if run("mkdir -p {}".format(re_path)).failed is True:
+        return False
+    if run("tar -xzf /tmp/{} -C {}".format(archive, re_path)).failed is True:
+        return False
+
+    if run("rm /tmp/{}".format(archive)).failed is True:
+        return False
+    pth = "/data/web_static/releases"
+    if run("mv -f {}/{}/web_static/* {}/{}".
+           format(pth, arch_name, pth, arch_name)).failed is True:
+        return False
+
+    if run("rm -rf {}/{}/web_static".format(pth, arch_name)).failed is True:
+        return False
+    if run("rm -rf /data/web_static/current").failed is True:
+        return False
+    if run("ln -s {} /data/web_static/current".format(re_path)).failed is True:
+        return False
+    print("New version deployed!")
+    return True
