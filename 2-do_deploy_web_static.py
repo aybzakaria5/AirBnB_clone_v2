@@ -1,5 +1,6 @@
 #!/usr/bin/python3
-"""Compress web_static files."""
+"""a script that deployes files into the servers
+using fabric ."""
 
 from fabric.api import local
 from fabric.api import run
